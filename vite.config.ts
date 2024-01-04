@@ -55,8 +55,12 @@ export default defineConfig({
         server.httpServer!.once('listening', async () => {
           // @ts-ignore
           port = server.httpServer.address()['port'];
-          await cleanDir(outDir);
-          await writeFile(join(outDir, 'index.js'), getIndexCode(port));
+          // await cleanDir(outDir);
+		  const indexJs = join(outDir, 'index.js')
+		  if (existsSync(indexJs)) {
+			  await rm(indexJs);
+		  }
+          await writeFile(indexJs, getIndexCode(port));
         });
       },
       transform: (code, id) => {
