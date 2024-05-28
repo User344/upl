@@ -4,7 +4,7 @@ UPL is a library for [Pengu Loader](https://pengu.lol/) that provides a develope
 ## Installation
 To use UPL in your project install it from npm:
 ```
-npm install @pengu/upl
+npm install pengu-upl
 ```
 
 ## Features
