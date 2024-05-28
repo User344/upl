@@ -2,14 +2,20 @@ import { initCore } from './core'
 
 import * as observer from './modules/observer'
 import * as hooks from './modules/hooks'
-import * as uikit from './modules/uikit'
-export { observer, hooks, uikit }
+// import * as settings from './modules/settings'
+export { observer, hooks, /*settings*/ }
 
 /**
  * Init UPL.
  * Must be called once at startup before calling any other functions.
- * @throws Will throw an error if UPL is already initialized.
+ * @throws Will throw an error if UPL is already initialized or {@see penguContext} is not a valid Pengu Context.
  */
-export function initUPL(context: PenguContext) {
-	initCore(context)
+export function init(penguContext: any) {
+    if (penguContext.rcp === undefined ||
+        typeof penguContext.rcp.preInit != 'function' ||
+        typeof penguContext.rcp.postInit != 'function') {
+        throw new Error('context is not a valid Pengu Context!')
+    }
+
+    initCore(penguContext as PenguContext)
 }

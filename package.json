@@ -1,20 +1,27 @@
 {
-  "name": "upl",
-  "description": "unproductive's pengu library",
-  "version": "0.1.0",
-  "license": "WTFPL",
-  "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build"
-  },
-  "devDependencies": {
-    "@types/node": "^20.4.7",
-    "typescript": "^5.1.6",
-    "vite": "^4.4.8",
-    "vite-plugin-dts": "^3.7.0",
-    "vite-plugin-mkcert": "^1.16.0"
-  }
+    "name": "pengu-upl",
+    "description": "unproductive's pengu library",
+    "version": "1.0.0",
+    "license": "AGPL-3.0-or-later",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "publish": "npm publish --access=public"
+    },
+    "devDependencies": {
+        "@types/node": "^20.4.7",
+        "typescript": "^5.1.6",
+        "vite": "^5.2.11",
+        "vite-plugin-dts": "^3.7.0",
+        "vite-plugin-mkcert": "^1.16.0",
+        "vite-tsconfig-paths": "^4.3.2"
+    },
+    "author": "imunproductive",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/user344/upl.git"
+    }
 }
