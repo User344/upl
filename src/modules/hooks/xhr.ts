@@ -16,44 +16,73 @@ interface XhrHookEntry {
     post_callback: ResourceHookPostCallback | undefined
 }
 
-const _entries = new Map<string, XhrHookEntry>()
+const _entriesText = new Map<string, XhrHookEntry>()
+const _entriesRegex: (readonly [RegExp, XhrHookEntry])[] = []
 const _initOnce = new Once(init)
 
 /**
  * Hook an XHR request.
+ * A string hook always takes precedence over a regex hook, even if the regex matches the string.
+ * @param path A string (exact match) or a regex pattern.
  * @param callback Called _BEFORE_ request is sent, allowing you to modify request.
  */
-export function hookPre(path: string, callback: ResourceHookPreCallback) {
+export function hookPre(path: string | RegExp, callback: ResourceHookPreCallback) {
     _initOnce.trigger()
 
-    var entry = _entries[path]
-    if (entry === undefined) {
-        _entries[path] = { pre_callback: callback, post_callback: undefined }
+    if (typeof path === 'string') {
+        var entry = _entriesText[path]
+        if (entry === undefined) {
+            _entriesText[path] = { pre_callback: callback, post_callback: undefined }
+        } else {
+            _entriesText[path].pre_callback = callback
+        }
+    } else if (path instanceof RegExp) {
+        var entry = _entriesRegex.findIndex(x => x[0] == path);
+        if (entry === -1) {
+            _entriesRegex.push([path, { pre_callback: callback, post_callback: undefined }])
+        } else {
+            _entriesRegex[entry][1].pre_callback = callback
+        }
     } else {
-        _entries[path].pre_callback = callback
+        throw new TypeError('Invalid path type!')
     }
 }
 
 /**
  * Hook an XHR request.
+ * A string hook always takes precedence over a regex hook, even if the regex matches the string.
+ * @param path A string (exact match) or a regex pattern.
  * @param callback Called _AFTER_ request is sent, allowing you to modify response.
  */
-export function hookPost(path: string, callback: ResourceHookPostCallback) {
+export function hookPost(path: string | RegExp, callback: ResourceHookPostCallback) {
     _initOnce.trigger()
 
-    var entry = _entries[path]
-    if (entry === undefined) {
-        _entries[path] = { pre_callback: undefined, post_callback: callback }
+    if (typeof path === 'string') {
+        var entry = _entriesText[path]
+        if (entry === undefined) {
+            _entriesText[path] = { pre_callback: undefined, post_callback: callback }
+        } else {
+            _entriesText[path].post_callback = callback
+        }
+    } else if (path instanceof RegExp) {
+        var entry = _entriesRegex.findIndex(x => x[0] == path);
+        if (entry === -1) {
+            _entriesRegex.push([path, { pre_callback: undefined, post_callback: callback }])
+        } else {
+            _entriesRegex[entry][1].post_callback = callback
+        }
     } else {
-        _entries[path].post_callback = callback
+        throw new TypeError('Invalid path type!')
     }
 }
 
 /**
  * Hook a text XHR request.
+ * A string hook always takes precedence over a regex hook, even if the regex matches the string.
+ * @param path A string (exact match) or a regex pattern.
  * @param callback Called _BEFORE_ request is sent, allowing you to modify request.
  */
-export function hookTextPre(path: string, callback: ResourceHookTextCallback) {
+export function hookTextPre(path: string | RegExp, callback: ResourceHookTextCallback) {
     hookPre(path, (_, body, original) => {
         if (typeof body !== 'string') {
             console.error('UPL: Tried to hook text XHR request but body is not a string!')
@@ -70,9 +99,11 @@ export function hookTextPre(path: string, callback: ResourceHookTextCallback) {
 
 /**
  * Hook a text XHR request.
+ * A string hook always takes precedence over a regex hook, even if the regex matches the string.
+ * @param path A string (exact match) or a regex pattern.
  * @param callback Called _AFTER_ request is sent, allowing you to modify response.
  */
-export function hookTextPost(path: string, callback: ResourceHookTextCallback) {
+export function hookTextPost(path: string | RegExp, callback: ResourceHookTextCallback) {
     hookPost(path, (request, original) => {
         if (request.responseType !== '' && request.responseType !== 'text') {
             console.error('UPL: Tried to hook text XHR request but response is not a string!')
@@ -96,7 +127,17 @@ export function hookTextPost(path: string, callback: ResourceHookTextCallback) {
 
 const _xhrOriginalOpen = XMLHttpRequest.prototype.open;
 function hookedOpen(_: string, url: string | URL) {
-    var entry = _entries[url.toString()]
+    let urlStr = url.toString()
+    var entry = _entriesText.get(urlStr)
+
+    if (entry === undefined && _entriesRegex.length > 0) {
+        for (const [regex, entry2] of _entriesRegex) {
+            if (regex.test(urlStr)) {
+                entry = entry2
+                break
+            }
+        }
+    }
 
     if (entry !== undefined) {
         let originalSend = this.send
@@ -106,15 +147,15 @@ function hookedOpen(_: string, url: string | URL) {
                 return originalSend.apply(this, [body])
             }
 
-            if (entry.post_callback !== undefined) {
+            if (entry!.post_callback !== undefined) {
                 let originalOnReadyStateChanged = this.onreadystatechange
                 this.onreadystatechange = function(ev: Event) {
-                    if (this.readyState === 4 && entry.post_callback !== undefined) {
+                    if (this.readyState === 4 && entry!.post_callback !== undefined) {
                         let original = () => {
                             originalOnReadyStateChanged!.apply(this, [ev])
                         }
 
-                        entry.post_callback(this, original)
+                        entry!.post_callback(this, original)
                         return
                     }
 
@@ -123,15 +164,13 @@ function hookedOpen(_: string, url: string | URL) {
                 };
             }
 
-            if (entry.pre_callback !== undefined) {
+            if (entry!.pre_callback !== undefined) {
                 let original = (content: XMLHttpRequestBodyInit | null) => {
                     body = content
                     originalSend.apply(this, [body]);
                 }
 
-                // need to do || null because otherwise typescript is tripping trying to
-                // convert undefined to null (where did null come from???)
-                entry.pre_callback(this, body || null, original)
+                entry!.pre_callback(this, body || null, original)
             } else {
                 originalSend.apply(this, [body]);
             }
