@@ -1,7 +1,8 @@
 import { Core } from 'src/core'
 import { Once } from 'src/utils/once'
+import * as ws from 'src/modules/ws'
 
-let _wsHookMap: { [id: string]: (content: any, original: (content: any) => void) => void } = {}
+let _entriesMessage: { [id: string]: (content: any, original: (content: any) => void) => void } = {}
 const _initOnce = new Once(init)
 
 /**
@@ -9,7 +10,7 @@ const _initOnce = new Once(init)
  */
 export function hook(endpoint: string, callback: (content: any, original: (content: any) => void) => void) {
     _initOnce.trigger()
-    _wsHookMap[endpoint] = callback
+    _entriesMessage[endpoint] = callback
 }
 
 /**
@@ -30,51 +31,40 @@ export function hookText(endpoint: string, callback: (content: string, original:
     })
 }
 
-function init() {
-    let context = Core?.Context
+function initHook(prCtx: any) {
+    let _publishMethod = prCtx.socket._dispatcher.publish
+        .bind(prCtx.socket._dispatcher) as ws.PublishMethod;
 
-    if (context == null) {
+    // Set publish method of WS module to original,
+    // so it doesn't call our hook instead.
+    ws.setPublishMethod(_publishMethod)
+
+    prCtx.socket._dispatcher.publish = function(endpoint: string, payload: string) {
+        let entry = _entriesMessage[endpoint]
+        if (entry === undefined) {
+            return _publishMethod(endpoint, payload)
+        }
+
+        let original = (content: any) => {
+            _publishMethod(endpoint, content)
+        }
+
+        return entry(payload, original)
+    }
+}
+
+function init() {
+    if (Core === undefined) {
         throw new Error("UPL is not initialized!")
     }
 
-    context.rcp.postInit('rcp-fe-common-libs', async (api) => {
-        let originalGetDataBinding = api.getDataBinding
+    let prCtx = Core.PluginRunnerContext
 
-        api.getDataBinding = async function(rcp_name: string) {
-            let originalDataBinding = await originalGetDataBinding.apply(this, arguments)
-
-            let hookedDataBinding = function(this: any, basePath: string, socket: any) {
-                let dataBinding = originalDataBinding.apply(this, arguments)
-                let cache = dataBinding.cache
-
-                // FIXME: Hooking _triggerResourceObservers only changes data on update,
-                // and doesn't change it on initial databinding call if data is cached (iirc)
-
-                let originalTriggerObservers = cache._triggerResourceObservers
-                cache._triggerResourceObservers = function(this: any, endpoint: string, content: any, error: any) {
-                    const callback = _wsHookMap[endpoint]
-                    if (callback == undefined) {
-                        return originalTriggerObservers.apply(this, [endpoint, content, error])
-                    }
-
-                    let original = (content: any) => {
-                        originalTriggerObservers.apply(this, [endpoint, content, error])
-                    }
-
-                    return callback(content, original)
-                }
-
-                return dataBinding
-            }
-
-            // @ts-ignore
-            hookedDataBinding.bindTo = function(socket: any) {
-                let result = originalDataBinding.bindTo.apply(this, arguments)
-                result.dataBinding = hookedDataBinding
-                return result
-            }
-
-            return Promise.resolve(hookedDataBinding)
-        }
-    })
+    if (prCtx !== undefined) {
+        initHook(prCtx)
+    } else {
+        Core.PluginRunnerContextAwaiters.push((ctx) => {
+            initHook(ctx)
+        })
+    }
 }

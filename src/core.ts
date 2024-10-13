@@ -1,10 +1,12 @@
 class UPLCore {
     Context: PenguContext
-    PluginRunnerContext: any | null
+    PluginRunnerContext: any | undefined
+    PluginRunnerContextAwaiters: ((ctx: any) => void)[]
 
     constructor(context: PenguContext) {
         this.Context = context
-        this.PluginRunnerContext = null
+        this.PluginRunnerContext = undefined
+        this.PluginRunnerContextAwaiters = []
     }
 }
 export let Core: UPLCore | undefined
@@ -19,6 +21,10 @@ export function initCore(context: PenguContext) {
     context.rcp.preInit('rcp-fe-common-libs', async (api) => {
         if (Core !== undefined) {
             Core.PluginRunnerContext = api.context
+
+            for (const awaiter of Core.PluginRunnerContextAwaiters) {
+                awaiter(Core.PluginRunnerContext)
+            }
         }
     })
 }

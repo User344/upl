@@ -1,12 +1,23 @@
 import { Core } from 'src/core'
 import { Once } from 'src/utils/once'
 
-type PublishMethod = (endpoint: string, payload: string) => void
+/** @internal */
+export type PublishMethod = (endpoint: string, payload: string) => void
 
 let _once = new Once(init)
 let _publishMethod: PublishMethod | undefined
 
+/** @internal */
+export function setPublishMethod(method: PublishMethod) {
+    _publishMethod = method
+}
+
 function init() {
+    if (_publishMethod !== undefined) {
+        // _publishMethod was set externally.
+        return
+    }
+
     if (Core == undefined) {
         throw new Error("UPL is not initialized!")
     }
@@ -26,6 +37,8 @@ function init() {
  * that publishes a websocket message with EVENT(8) type.
  * @param endpoint The endpoint to fire the event on.
  * @param payload The payload to send with the event.
+ * @throws Will throw an error if UPL is not initialized,
+ * or plugin runner context is not yet available.
  */
 export function fireEvent(endpoint: string, payload: any) {
     publishMessage(
@@ -46,6 +59,8 @@ export function fireEvent(endpoint: string, payload: any) {
  * Meaning that you have to specify message type, and can publish a message that is not an event.
  * @param endpoint The endpoint to publish the message on.
  * @param payload The payload to send with the message.
+ * @throws Will throw an error if UPL is not initialized,
+ * or plugin runner context is not yet available.
  */
 export function publishMessage(endpoint: string, payload: any) {
     _once.trigger()
