@@ -109,16 +109,6 @@ function hookedOpen(_: string, url: string | URL) {
                 return originalSend.apply(this, [body])
             }
 
-            if (entry.pre_callback !== undefined) {
-                let original = (content: XMLHttpRequestBodyInit | null) => {
-                    body = content
-                }
-
-                // need to do || null because otherwise typescript is tripping trying to
-                // convert undefined to null (where did null come from???)
-                entry.pre_callback(this, body || null, original)
-            }
-
             if (entry.post_callback !== undefined) {
                 let originalOnReadyStateChanged = this.onreadystatechange
                 this.onreadystatechange = function(ev: Event) {
@@ -136,7 +126,18 @@ function hookedOpen(_: string, url: string | URL) {
                 };
             }
 
-            originalSend.apply(this, [body]);
+            if (entry.pre_callback !== undefined) {
+                let original = (content: XMLHttpRequestBodyInit | null) => {
+                    body = content
+                    originalSend.apply(this, [body]);
+                }
+
+                // need to do || null because otherwise typescript is tripping trying to
+                // convert undefined to null (where did null come from???)
+                entry.pre_callback(this, body || null, original)
+            } else {
+                originalSend.apply(this, [body]);
+            }
         };
     }
 
