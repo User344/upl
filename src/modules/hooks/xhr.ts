@@ -3,13 +3,13 @@ import { Once } from 'src/utils/once'
 // TODO: Support multiple hooks on the same path.
 
 type ResourceHookPreOriginal = (body: XMLHttpRequestBodyInit | null) => void
-type ResourceHookPreCallback = (request: XMLHttpRequest, body: XMLHttpRequestBodyInit | null, original: ResourceHookPreOriginal) => void
+type ResourceHookPreCallback = (endpoint: string, request: XMLHttpRequest, body: XMLHttpRequestBodyInit | null, original: ResourceHookPreOriginal) => void
 
 type ResourceHookPostOriginal = () => void
-type ResourceHookPostCallback = (request: XMLHttpRequest, original: ResourceHookPostOriginal) => void
+type ResourceHookPostCallback = (endpoint: string, request: XMLHttpRequest, original: ResourceHookPostOriginal) => void
 
 type ResourceHookTextOriginal = (response: string) => void
-type ResourceHookTextCallback = (body: string, original: ResourceHookTextOriginal) => void
+type ResourceHookTextCallback = (endpoint: string, body: string, original: ResourceHookTextOriginal) => void
 
 interface XhrHookEntry {
     pre_callback: ResourceHookPreCallback | undefined
@@ -83,7 +83,7 @@ export function hookPost(path: string | RegExp, callback: ResourceHookPostCallba
  * @param callback Called _BEFORE_ request is sent, allowing you to modify request.
  */
 export function hookTextPre(path: string | RegExp, callback: ResourceHookTextCallback) {
-    hookPre(path, (_, body, original) => {
+    hookPre(path, (endpoint, _, body, original) => {
         if (typeof body !== 'string') {
             console.error('UPL: Tried to hook text XHR request but body is not a string!')
             return original(body)
@@ -93,7 +93,7 @@ export function hookTextPre(path: string | RegExp, callback: ResourceHookTextCal
             original(newBody)
         }
 
-        callback(body, _original)
+        callback(endpoint, body, _original)
     })
 }
 
@@ -104,7 +104,7 @@ export function hookTextPre(path: string | RegExp, callback: ResourceHookTextCal
  * @param callback Called _AFTER_ request is sent, allowing you to modify response.
  */
 export function hookTextPost(path: string | RegExp, callback: ResourceHookTextCallback) {
-    hookPost(path, (request, original) => {
+    hookPost(path, (endpoint, request, original) => {
         if (request.responseType !== '' && request.responseType !== 'text') {
             console.error('UPL: Tried to hook text XHR request but response is not a string!')
             return original()
@@ -121,7 +121,7 @@ export function hookTextPost(path: string | RegExp, callback: ResourceHookTextCa
             original()
         }
 
-        callback(this.responseText, _original)
+        callback(endpoint, this.responseText, _original)
     })
 }
 
@@ -150,7 +150,7 @@ function hookedOpen(_: string, url: string | URL) {
                             originalOnReadyStateChanged!.apply(this, [ev])
                         }
 
-                        entry!.post_callback(this, original)
+                        entry!.post_callback(urlStr, this, original)
                         return
                     }
 
@@ -165,7 +165,7 @@ function hookedOpen(_: string, url: string | URL) {
                     originalSend.apply(this, [body]);
                 }
 
-                entry!.pre_callback(this, body || null, original)
+                entry!.pre_callback(urlStr, this, body || null, original)
             } else {
                 originalSend.apply(this, [body]);
             }

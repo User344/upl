@@ -3,13 +3,10 @@ import { Once } from 'src/utils/once'
 import * as ws from 'src/modules/ws'
 
 export type WebSocketMessageHookOriginal = (payload: string) => void
-export type WebSocketMessageHookCallback = (payload: string, original: WebSocketMessageHookOriginal) => void
+export type WebSocketMessageHookCallback = (endpoint: string, payload: string, original: WebSocketMessageHookOriginal) => void
 
 export type WebSocketEventHookOriginal = (data: any) => void
-export type WebSocketEventHookCallback = (data: any, original: WebSocketEventHookOriginal) => void
-
-export type WebSocketTextHookOriginal = (content: string) => void
-export type WebSocketTextHookCallback = (content: string, original: WebSocketTextHookOriginal) => void
+export type WebSocketEventHookCallback = (endpoint: string, data: any, original: WebSocketEventHookOriginal) => void
 
 const _entriesMessageText = new Map<string, WebSocketMessageHookCallback>()
 const _entriesMessageRegex: (readonly [RegExp, WebSocketMessageHookCallback])[] = []
@@ -34,7 +31,7 @@ export function hookMessage(endpoint: string | RegExp, callback: WebSocketMessag
  * Hook a websocket event endpoint.
  */
 export function hookEvent(endpoint: string | RegExp, callback: WebSocketEventHookCallback) {
-    hookMessage(endpoint, (payload, original) => {
+    hookMessage(endpoint, (_endpoint, payload, original) => {
         let payloadObject = JSON.parse(payload)
 
         let _original = (newPayload: any) => {
@@ -42,7 +39,7 @@ export function hookEvent(endpoint: string | RegExp, callback: WebSocketEventHoo
             original(JSON.stringify(payloadObject))
         }
 
-        callback(payloadObject[2].data, _original)
+        callback(_endpoint, payloadObject[2].data, _original)
     })
 }
 
@@ -69,7 +66,7 @@ function initHook(prCtx: any) {
             _publishMethod(endpoint, content)
         }
 
-        return entry(payload, original)
+        return entry(endpoint, payload, original)
     }
 }
 
