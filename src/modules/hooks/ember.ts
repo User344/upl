@@ -20,8 +20,8 @@ type MatchingEntry = {
     entry: Entry
 }
 
-const _entriesName = new Map<string, Entry>()
-const _entriesMatching: MatchingEntry[] = []
+const _componentEntriesNames = new Map<string, Entry>()
+const _componentEntriesMatching: MatchingEntry[] = []
 const _initOnce = new Once(init)
 
 /**
@@ -33,9 +33,9 @@ export function hookComponentMethodByName(className: string, methodName: string,
 
     var hookEntry: HookEntry = { method: methodName, callback: callback }
 
-    var entry = _entriesName.get(className)
+    var entry = _componentEntriesNames.get(className)
     if (entry === undefined) {
-        _entriesName.set(className, { hooks: [hookEntry], mixins: [] })
+        _componentEntriesNames.set(className, { hooks: [hookEntry], mixins: [] })
     } else {
         entry.hooks.push(hookEntry)
     }
@@ -49,7 +49,7 @@ export function hookComponentMethodByMatching(matcher: MatcherCallback, methodNa
     _initOnce.trigger()
 
     var hookEntry: HookEntry = { method: methodName, callback: callback }
-    _entriesMatching.push({ matcher: matcher, entry: { hooks: [hookEntry], mixins: [] } })
+    _componentEntriesMatching.push({ matcher: matcher, entry: { hooks: [hookEntry], mixins: [] } })
 }
 
 /**
@@ -59,9 +59,9 @@ export function hookComponentMethodByMatching(matcher: MatcherCallback, methodNa
 export function extendClassByName(className: string, callback: MixinCallback) {
     _initOnce.trigger()
 
-    var entry = _entriesName.get(className)
+    var entry = _componentEntriesNames.get(className)
     if (entry === undefined) {
-        _entriesName.set(className, { hooks: [], mixins: [callback] })
+        _componentEntriesNames.set(className, { hooks: [], mixins: [callback] })
     } else {
         entry.mixins.push(callback)
     }
@@ -74,7 +74,7 @@ export function extendClassByName(className: string, callback: MixinCallback) {
 export function extendClassByMatching(matcher: MatcherCallback, callback: MixinCallback) {
     _initOnce.trigger()
 
-    _entriesMatching.push({ matcher: matcher, entry: { hooks: [], mixins: [callback] } })
+    _componentEntriesMatching.push({ matcher: matcher, entry: { hooks: [], mixins: [callback] } })
 }
 
 function init() {
@@ -99,7 +99,7 @@ function init() {
                         .filter(x => typeof x === 'object')
 
                     for (const obj of potentialObjects) {
-                        for (const entry of _entriesMatching) {
+                        for (const entry of _componentEntriesMatching) {
                             if (entry.matcher(obj)) {
                                 result = handleComponent(Ember, entry.entry, result)
                             }
@@ -111,7 +111,7 @@ function init() {
                         .map(x => x.classNames.join(' '))
 
                     for (const className of classNames) {
-                        const entry = _entriesName.get(className)
+                        const entry = _componentEntriesNames.get(className)
                         if (entry === undefined) {
                             continue;
                         }
