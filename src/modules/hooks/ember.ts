@@ -22,6 +22,7 @@ type MatchingEntry = {
 
 const _componentEntriesNames = new Map<string, Entry>()
 const _componentEntriesMatching: MatchingEntry[] = []
+const _serviceEntriesMatching: MatchingEntry[] = []
 const _initOnce = new Once(init)
 
 /**
@@ -77,6 +78,27 @@ export function extendClassByMatching(matcher: MatcherCallback, callback: MixinC
     _componentEntriesMatching.push({ matcher: matcher, entry: { hooks: [], mixins: [callback] } })
 }
 
+/**
+ * Hooks ember service's method by matching object's properties.
+ * @param callback Fired when method named {@link methodName} in service matching {@link matcher} is called.
+ */
+export function hookServiceMethodByMatching(matcher: MatcherCallback, methodName: string, callback: HookCallback) {
+    _initOnce.trigger()
+
+    var hookEntry: HookEntry = { method: methodName, callback: callback }
+    _serviceEntriesMatching.push({ matcher: matcher, entry: { hooks: [hookEntry], mixins: [] } })
+}
+
+/**
+ * Extends and overrides properties of a service matching {@link matcher}.
+ * @param callback Fired when service matching {@link matcher} is created.
+ */
+export function extendServiceByMatching(matcher: MatcherCallback, callback: MixinCallback) {
+    _initOnce.trigger()
+
+    _serviceEntriesMatching.push({ matcher: matcher, entry: { hooks: [], mixins: [callback] } })
+}
+
 function init() {
     let context = Core?.Context
 
@@ -91,6 +113,7 @@ function init() {
 
             result.then((Ember: any) => {
                 const originalExtend = Ember.Component.extend as Function
+                const originalServiceExtend = Ember.Service.extend as Function
 
                 Ember.Component.extend = function(...args: any[]): any {
                     let result = originalExtend.apply(this, arguments)
@@ -101,7 +124,7 @@ function init() {
                     for (const obj of potentialObjects) {
                         for (const entry of _componentEntriesMatching) {
                             if (entry.matcher(obj)) {
-                                result = handleComponent(Ember, entry.entry, result)
+                                result = handleEntry(Ember, entry.entry, result)
                             }
                         }
                     }
@@ -116,9 +139,25 @@ function init() {
                             continue;
                         }
 
-                        result = handleComponent(Ember, entry, result)
+                        result = handleEntry(Ember, entry, result)
                     }
 
+                    return result
+                }
+
+                Ember.Service.extend = function(...args: any[]): any {
+                    let result = originalServiceExtend.apply(this, arguments)
+
+                    const potentialObjects = args
+                        .filter(x => typeof x === 'object')
+
+                    for (const obj of potentialObjects) {
+                        for (const entry of _serviceEntriesMatching) {
+                            if (entry.matcher(obj)) {
+                                result = handleEntry(Ember, entry.entry, result)
+                            }
+                        }
+                    }
                     return result
                 }
 
@@ -130,7 +169,7 @@ function init() {
     })
 }
 
-function handleComponent(Ember: any, entry: Entry, result: any): any {
+function handleEntry(Ember: any, entry: Entry, result: any): any {
     const proto = result.proto()
 
     if (proto.__UPL_IS_HOOKED) {
