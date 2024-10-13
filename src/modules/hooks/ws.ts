@@ -8,15 +8,23 @@ export type WebSocketHookCallback = (content: any, original: WebSocketHookOrigin
 export type WebSocketTextHookOriginal = (content: string) => void
 export type WebSocketTextHookCallback = (content: string, original: WebSocketTextHookOriginal) => void
 
-const _entriesMessage = new Map<string, WebSocketHookCallback>()
+const _entriesMessageText = new Map<string, WebSocketHookCallback>()
+const _entriesMessageRegex: (readonly [RegExp, WebSocketHookCallback])[] = []
 const _once = new Once(init)
 
 /**
  * Hook a websocket endpoint.
  */
-export function hook(endpoint: string, callback: WebSocketHookCallback) {
+export function hook(endpoint: string | RegExp, callback: WebSocketHookCallback) {
     _once.trigger()
-    _entriesMessage[endpoint] = callback
+
+    if (typeof endpoint === 'string') {
+        _entriesMessageText[endpoint] = callback
+    } else if (endpoint instanceof RegExp) {
+        _entriesMessageRegex.push([endpoint, callback])
+    } else {
+        throw new TypeError('Invalid endpoint type!')
+    }
 }
 
 /**
@@ -46,9 +54,14 @@ function initHook(prCtx: any) {
     ws.setPublishMethod(_publishMethod)
 
     prCtx.socket._dispatcher.publish = function(endpoint: string, payload: string) {
-        let entry = _entriesMessage[endpoint]
+        let entry = _entriesMessageText.get(endpoint)
+
         if (entry === undefined) {
-            return _publishMethod(endpoint, payload)
+            entry = _entriesMessageRegex.find(x => x[0].test(endpoint))?.[1];
+
+            if (entry === undefined) {
+                return _publishMethod(endpoint, payload)
+            }
         }
 
         let original = (content: any) => {

@@ -37,11 +37,11 @@ export function hookPre(path: string | RegExp, callback: ResourceHookPreCallback
             _entriesText[path].pre_callback = callback
         }
     } else if (path instanceof RegExp) {
-        var entry = _entriesRegex.findIndex(x => x[0] == path);
-        if (entry === -1) {
+        var index = _entriesRegex.findIndex(x => x[0] == path);
+        if (index === -1) {
             _entriesRegex.push([path, { pre_callback: callback, post_callback: undefined }])
         } else {
-            _entriesRegex[entry][1].pre_callback = callback
+            _entriesRegex[index][1].pre_callback = callback
         }
     } else {
         throw new TypeError('Invalid path type!')
@@ -65,11 +65,11 @@ export function hookPost(path: string | RegExp, callback: ResourceHookPostCallba
             _entriesText[path].post_callback = callback
         }
     } else if (path instanceof RegExp) {
-        var entry = _entriesRegex.findIndex(x => x[0] == path);
-        if (entry === -1) {
+        var index = _entriesRegex.findIndex(x => x[0] == path);
+        if (index === -1) {
             _entriesRegex.push([path, { pre_callback: undefined, post_callback: callback }])
         } else {
-            _entriesRegex[entry][1].post_callback = callback
+            _entriesRegex[index][1].post_callback = callback
         }
     } else {
         throw new TypeError('Invalid path type!')
@@ -131,12 +131,7 @@ function hookedOpen(_: string, url: string | URL) {
     var entry = _entriesText.get(urlStr)
 
     if (entry === undefined && _entriesRegex.length > 0) {
-        for (const [regex, entry2] of _entriesRegex) {
-            if (regex.test(urlStr)) {
-                entry = entry2
-                break
-            }
-        }
+        entry = _entriesRegex.find(x => x[0].test(urlStr))?.[1];
     }
 
     if (entry !== undefined) {
