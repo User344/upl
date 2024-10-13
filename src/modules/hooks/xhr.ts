@@ -101,9 +101,6 @@ function hookedOpen(_: string, url: string | URL) {
     if (entry !== undefined) {
         let originalSend = this.send
 
-        // console.log('found entry')
-        // debugger
-
         this.send = function(body?: Document | XMLHttpRequestBodyInit | null) {
             if (body instanceof Document) {
                 return originalSend.apply(this, [body])
