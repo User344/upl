@@ -1,6 +1,24 @@
 import { Core } from 'src/core'
+import { Once } from 'src/utils/once'
 
 type PublishMethod = (endpoint: string, payload: string) => void
+
+let _once = new Once(init)
+let _publishMethod: PublishMethod | undefined
+
+function init() {
+    if (Core == undefined) {
+        throw new Error("UPL is not initialized!")
+    }
+
+    let prCtx = Core.PluginRunnerContext;
+    if (prCtx == undefined) {
+        throw new Error("UPL: PluginRunnerContext is undefined! Called too soon?")
+    }
+
+    _publishMethod = prCtx.socket._dispatcher.publish
+        .bind(prCtx.socket._dispatcher) as PublishMethod;
+}
 
 /**
  * Fires a websocket event.
@@ -30,17 +48,7 @@ export function fireEvent(endpoint: string, payload: any) {
  * @param payload The payload to send with the message.
  */
 export function publishMessage(endpoint: string, payload: any) {
-    if (Core == undefined) {
-        throw new Error("UPL is not initialized!")
-    }
+    _once.trigger()
 
-    let prCtx = Core.PluginRunnerContext;
-    if (prCtx == undefined) {
-        throw new Error("UPL: PluginRunnerContext is undefined! Called too soon?")
-    }
-
-    let publishMethod = prCtx.socket._dispatcher.publish
-        .bind(prCtx.socket._dispatcher) as PublishMethod;
-
-    publishMethod(endpoint, payload)
+    _publishMethod!(endpoint, payload)
 }
