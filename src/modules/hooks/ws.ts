@@ -2,20 +2,23 @@ import { Core } from 'src/core'
 import { Once } from 'src/utils/once'
 import * as ws from 'src/modules/ws'
 
-export type WebSocketHookOriginal = (content: any) => void
-export type WebSocketHookCallback = (content: any, original: WebSocketHookOriginal) => void
+export type WebSocketMessageHookOriginal = (payload: string) => void
+export type WebSocketMessageHookCallback = (payload: string, original: WebSocketMessageHookOriginal) => void
+
+export type WebSocketEventHookOriginal = (data: any) => void
+export type WebSocketEventHookCallback = (data: any, original: WebSocketEventHookOriginal) => void
 
 export type WebSocketTextHookOriginal = (content: string) => void
 export type WebSocketTextHookCallback = (content: string, original: WebSocketTextHookOriginal) => void
 
-const _entriesMessageText = new Map<string, WebSocketHookCallback>()
-const _entriesMessageRegex: (readonly [RegExp, WebSocketHookCallback])[] = []
+const _entriesMessageText = new Map<string, WebSocketMessageHookCallback>()
+const _entriesMessageRegex: (readonly [RegExp, WebSocketMessageHookCallback])[] = []
 const _once = new Once(init)
 
 /**
- * Hook a websocket endpoint.
+ * Hook a websocket message endpoint.
  */
-export function hook(endpoint: string | RegExp, callback: WebSocketHookCallback) {
+export function hookMessage(endpoint: string | RegExp, callback: WebSocketMessageHookCallback) {
     _once.trigger()
 
     if (typeof endpoint === 'string') {
@@ -28,20 +31,18 @@ export function hook(endpoint: string | RegExp, callback: WebSocketHookCallback)
 }
 
 /**
- * Hook a websocket text endpoint.
+ * Hook a websocket event endpoint.
  */
-export function hookText(endpoint: string, callback: WebSocketTextHookCallback) {
-    hook(endpoint, (content, original) => {
-        if (typeof content !== 'string') {
-            console.error('UPL: Tried to hook text websocket endpoint but content is not a string!')
-            return original(content)
+export function hookEvent(endpoint: string | RegExp, callback: WebSocketEventHookCallback) {
+    hookMessage(endpoint, (payload, original) => {
+        let payloadObject = JSON.parse(payload)
+
+        let _original = (newPayload: any) => {
+            payloadObject[2].data = newPayload
+            original(JSON.stringify(payloadObject))
         }
 
-        const _original = (newContent: string) => {
-            original(newContent)
-        }
-
-        callback(content, _original)
+        callback(payloadObject[2].data, _original)
     })
 }
 
