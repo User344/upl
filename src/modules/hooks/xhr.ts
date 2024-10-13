@@ -36,7 +36,7 @@ export function hookPre(path: string, callback: ResourceHookPreCallback) {
 
 /**
  * Hook an XHR request.
- * @param callback Called _AFTER_ request is sent, allowing you to modify request.
+ * @param callback Called _AFTER_ request is sent, allowing you to modify response.
  */
 export function hookPost(path: string, callback: ResourceHookPostCallback) {
     _initOnce.trigger()
@@ -70,7 +70,7 @@ export function hookTextPre(path: string, callback: ResourceHookTextCallback) {
 
 /**
  * Hook a text XHR request.
- * @param callback Called _AFTER_ request is sent, allowing you to modify request.
+ * @param callback Called _AFTER_ request is sent, allowing you to modify response.
  */
 export function hookTextPost(path: string, callback: ResourceHookTextCallback) {
     hookPost(path, (request, original) => {
