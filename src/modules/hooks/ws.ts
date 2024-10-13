@@ -2,21 +2,27 @@ import { Core } from 'src/core'
 import { Once } from 'src/utils/once'
 import * as ws from 'src/modules/ws'
 
-let _entriesMessage: { [id: string]: (content: any, original: (content: any) => void) => void } = {}
-const _initOnce = new Once(init)
+export type WebSocketHookOriginal = (content: any) => void
+export type WebSocketHookCallback = (content: any, original: WebSocketHookOriginal) => void
+
+export type WebSocketTextHookOriginal = (content: string) => void
+export type WebSocketTextHookCallback = (content: string, original: WebSocketTextHookOriginal) => void
+
+const _entriesMessage = new Map<string, WebSocketHookCallback>()
+const _once = new Once(init)
 
 /**
  * Hook a websocket endpoint.
  */
-export function hook(endpoint: string, callback: (content: any, original: (content: any) => void) => void) {
-    _initOnce.trigger()
+export function hook(endpoint: string, callback: WebSocketHookCallback) {
+    _once.trigger()
     _entriesMessage[endpoint] = callback
 }
 
 /**
  * Hook a websocket text endpoint.
  */
-export function hookText(endpoint: string, callback: (content: string, original: (content: string) => void) => void) {
+export function hookText(endpoint: string, callback: WebSocketTextHookCallback) {
     hook(endpoint, (content, original) => {
         if (typeof content !== 'string') {
             console.error('UPL: Tried to hook text websocket endpoint but content is not a string!')
