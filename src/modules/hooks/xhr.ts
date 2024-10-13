@@ -16,7 +16,7 @@ interface XhrHookEntry {
     post_callback: ResourceHookPostCallback | undefined
 }
 
-let _xhrHookMap: { [id: string]: XhrHookEntry } = {}
+const _entries = new Map<string, XhrHookEntry>()
 const _initOnce = new Once(init)
 
 /**
@@ -26,11 +26,11 @@ const _initOnce = new Once(init)
 export function hookPre(path: string, callback: ResourceHookPreCallback) {
     _initOnce.trigger()
 
-    var entry = _xhrHookMap[path]
+    var entry = _entries[path]
     if (entry === undefined) {
-        _xhrHookMap[path] = { pre_callback: callback, post_callback: undefined }
+        _entries[path] = { pre_callback: callback, post_callback: undefined }
     } else {
-        _xhrHookMap[path].pre_callback = callback
+        _entries[path].pre_callback = callback
     }
 }
 
@@ -41,11 +41,11 @@ export function hookPre(path: string, callback: ResourceHookPreCallback) {
 export function hookPost(path: string, callback: ResourceHookPostCallback) {
     _initOnce.trigger()
 
-    var entry = _xhrHookMap[path]
+    var entry = _entries[path]
     if (entry === undefined) {
-        _xhrHookMap[path] = { pre_callback: undefined, post_callback: callback }
+        _entries[path] = { pre_callback: undefined, post_callback: callback }
     } else {
-        _xhrHookMap[path].post_callback = callback
+        _entries[path].post_callback = callback
     }
 }
 
@@ -96,7 +96,7 @@ export function hookTextPost(path: string, callback: ResourceHookTextCallback) {
 
 const _xhrOriginalOpen = XMLHttpRequest.prototype.open;
 function hookedOpen(_: string, url: string | URL) {
-    var entry = _xhrHookMap[url.toString()]
+    var entry = _entries[url.toString()]
 
     if (entry !== undefined) {
         let originalSend = this.send
