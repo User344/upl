@@ -6,7 +6,7 @@ export type WebSocketMessageHookOriginal = (payload: string) => void
 export type WebSocketMessageHookCallback = (endpoint: string, payload: string, original: WebSocketMessageHookOriginal) => void
 
 export type WebSocketEventHookOriginal = (data: any) => void
-export type WebSocketEventHookCallback = (endpoint: string, data: any, original: WebSocketEventHookOriginal) => void
+export type WebSocketEventHookCallback = (eventType: string, endpoint: string, data: any, original: WebSocketEventHookOriginal) => void
 
 const _entriesMessageText = new Map<string, WebSocketMessageHookCallback>()
 const _entriesMessageRegex: (readonly [RegExp, WebSocketMessageHookCallback])[] = []
@@ -39,7 +39,7 @@ export function hookEvent(endpoint: string | RegExp, callback: WebSocketEventHoo
             original(JSON.stringify(payloadObject))
         }
 
-        callback(_endpoint, payloadObject[2].data, _original)
+        callback(payloadObject[2].eventType, _endpoint, payloadObject[2].data, _original)
     })
 }
 
