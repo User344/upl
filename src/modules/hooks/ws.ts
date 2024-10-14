@@ -19,7 +19,7 @@ export function hookMessage(endpoint: string | RegExp, callback: WebSocketMessag
     _once.trigger()
 
     if (typeof endpoint === 'string') {
-        _entriesMessageText[endpoint] = callback
+        _entriesMessageText.set(endpoint, callback)
     } else if (endpoint instanceof RegExp) {
         _entriesMessageRegex.push([endpoint, callback])
     } else {
