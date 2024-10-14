@@ -35,19 +35,24 @@ function init() {
  * Fires a websocket event.
  * This method is a wrapper around {@link publishMessage}
  * that publishes a websocket message with EVENT(8) type.
+ * @param eventType The type of action performed at the specified endpoint. Possible values: "Update" (most common), "Create" and "Delete".
  * @param endpoint The endpoint to fire the event on.
  * @param payload The payload to send with the event.
  * @throws Will throw an error if UPL is not initialized,
  * or plugin runner context is not yet available.
  */
-export function fireEvent(endpoint: string, payload: any) {
+export function fireEvent(eventType: string, endpoint: string, payload: any = null) {
     publishMessage(
         endpoint,
         JSON.stringify(
             [
                 8,
                 "OnJsonApiEvent",
-                { "data": payload }
+                {
+                    "data": payload,
+                    "eventType": eventType,
+                    "uri": endpoint
+                }
             ]
         )
     )
