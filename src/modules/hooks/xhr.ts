@@ -32,7 +32,7 @@ export function hookPre(path: string | RegExp, callback: ResourceHookPreCallback
     if (typeof path === 'string') {
         var entry = _entriesText[path]
         if (entry === undefined) {
-            _entriesText[path] = { pre_callback: callback, post_callback: undefined }
+            _entriesText.set(path, { pre_callback: callback, post_callback: undefined })
         } else {
             _entriesText[path].pre_callback = callback
         }
@@ -60,7 +60,7 @@ export function hookPost(path: string | RegExp, callback: ResourceHookPostCallba
     if (typeof path === 'string') {
         var entry = _entriesText[path]
         if (entry === undefined) {
-            _entriesText[path] = { pre_callback: undefined, post_callback: callback }
+            _entriesText.set(path, { pre_callback: undefined, post_callback: callback })
         } else {
             _entriesText[path].post_callback = callback
         }
